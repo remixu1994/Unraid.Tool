@@ -5,22 +5,23 @@ namespace Unraid.Tool.QBittorrent;
 
 public class QbittorrentClient
 {
-    private readonly string _username;
-    private readonly string _password;
+    public bool IsAuthenticated { get; set; } = false;
+    private string _username;
+    private string _password;
     private readonly HttpClient _httpClient;
-    private readonly string _baseUrl;
+    private string _baseUrl;
 
-    public QbittorrentClient(string host, string username, string password)
+    public QbittorrentClient()
     {
-        _username = username;
-        _password = password;
-        _baseUrl = $"http://{host}/api/v2/";
         _httpClient = new HttpClient();
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
     }
 
-    public async Task AuthenticateAsync()
+    public async Task AuthenticateAsync(string host, string username, string password)
     {
+        _username = username;
+        _password = password;
+        _baseUrl = $"http://{host}/api/v2/";
         var content = new FormUrlEncodedContent(new[]
         {
             new KeyValuePair<string, string>("username", _username),
@@ -29,17 +30,34 @@ public class QbittorrentClient
         var response = await _httpClient.PostAsync(_baseUrl + "auth/login", content);
         if (!response.IsSuccessStatusCode)
         {
+            IsAuthenticated = false;
             string errorInfo = await response.Content.ReadAsStringAsync();
             throw new Exception($"Authentication failed:{errorInfo}");
         }
+
+        string resContent = await response.Content.ReadAsStringAsync();
+        if (resContent != "Ok.")
+        {
+            IsAuthenticated = false;
+            throw new Exception($"Authentication failed:{resContent}");
+        }
+        IsAuthenticated = true;
     }
 
-    public async Task<Torrent[]> GetTorrentsAsync()
+    public async Task<Torrent[]?> GetTorrentsAsync()
     {
         var response = await _httpClient.GetAsync(_baseUrl + "torrents/info");
         response.EnsureSuccessStatusCode();
         var torrentsJson = await response.Content.ReadAsStringAsync();
         return JsonSerializer.Deserialize<Torrent[]>(torrentsJson);
+    }
+
+    public async Task<TrackerInfo[]?> GetTrackersAsync(string torrentHash)
+    {
+        var response = await _httpClient.GetAsync(_baseUrl + $"torrents/trackers?hash={torrentHash}&m6uafhtd");
+        response.EnsureSuccessStatusCode();
+        var trackerJson = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<TrackerInfo[]>(trackerJson);
     }
 
     public async Task EditTrackerAsync(string torrentHash, string origUrl, string newUrl)
@@ -57,13 +75,13 @@ public class QbittorrentClient
             throw new Exception($"Failed to edit tracker: {errorInfo}");
         }
     }
-    
-    public async Task AddTrackersAsync(string torrentHash, string[] trackerUrls)
+
+    public async Task AddTrackersAsync(string torrentHash, string trackerUrl)
     {
         var content = new FormUrlEncodedContent(new[]
         {
             new KeyValuePair<string, string>("hash", torrentHash),
-            new KeyValuePair<string, string>("urls", string.Join("\n", trackerUrls)) // 使用换行符分隔
+            new KeyValuePair<string, string>("urls", trackerUrl)
         });
         var response = await _httpClient.PostAsync(_baseUrl + "torrents/addTrackers", content);
         if (!response.IsSuccessStatusCode)
@@ -72,14 +90,13 @@ public class QbittorrentClient
             throw new Exception($"Failed to add trackers: {errorInfo}");
         }
     }
-    
-    public async Task RemoveTrackersAsync(string torrentHash, string[] trackerUrls)
+
+    public async Task RemoveTrackersAsync(string torrentHash, string trackerUrl)
     {
-        var content = new FormUrlEncodedContent(new[]
-        {
+        var content = new FormUrlEncodedContent([
             new KeyValuePair<string, string>("hash", torrentHash),
-            new KeyValuePair<string, string>("urls", string.Join("|", trackerUrls)) // 使用管道符分隔
-        });
+            new KeyValuePair<string, string>("urls", trackerUrl)
+        ]);
         var response = await _httpClient.PostAsync(_baseUrl + "torrents/removeTrackers", content);
         if (!response.IsSuccessStatusCode)
         {
