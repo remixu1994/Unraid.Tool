@@ -1,4 +1,6 @@
 ﻿using JetBrains.Annotations;
+using Microsoft.Extensions.Logging;
+using Moq;
 using Unraid.Tool.QBittorrent;
 
 namespace Unraid.Test.QBittorrent;
@@ -11,7 +13,15 @@ public class QbittorrentClientTest
 
     public QbittorrentClientTest()
     {
-        _qbittorrentClient = new QbittorrentClient("192.168.1.13:8080", "", "");
+        _qbittorrentClient = new QbittorrentClient();
+        _qbittorrentClient.AuthenticateAsync("192.168.193.13:8082", "admin", "admin").Wait();
+    }
+
+    [TestMethod]
+    public async Task Should_Get_All_Qbittorrents()
+    {
+        var torrents = await _qbittorrentClient.GetTorrentsAsync();
+        IEnumerable<Torrent> enumerable = torrents.Where(x=>x.Hash == "0225896687fc2333b7d19f4cfed832cc16800d6b");
     }
     
     [TestMethod]
@@ -24,7 +34,7 @@ public class QbittorrentClientTest
 
         foreach (var torrent in oldTrackers)
         {
-            await _qbittorrentClient.AddTrackersAsync(torrent.Hash, [newTracker]);
+            await _qbittorrentClient.AddTrackersAsync(torrent.Hash, newTracker);
         }
     }
 
@@ -36,7 +46,7 @@ public class QbittorrentClientTest
         List<Torrent> oldTrackers = torrents.Where(x => x.Tracker == oldTracker).ToList();
         foreach (var torrent in oldTrackers)
         {
-            await _qbittorrentClient.RemoveTrackersAsync(torrent.Hash, [torrent.Tracker]);
+            await _qbittorrentClient.RemoveTrackersAsync(torrent.Hash, torrent.Tracker);
         }
     }
 
@@ -52,5 +62,14 @@ public class QbittorrentClientTest
         {
             await _qbittorrentClient.EditTrackerAsync(torrent.Hash, oldTracker, newTracker);
         }
+    }
+
+    [TestMethod]
+    public async Task Should_Replace_Tracker()
+    {
+        var newTracker = "https://tracker.carpt.net/announce.php?passkey=2c41be0128b3674c04bad0ecae56ca85";
+        var oldTracker = "https://tracker.carpt.net/announce.php?passkey=fede2a966617e011feefbada42119afa";
+        await new QbittorrentService(_qbittorrentClient, Mock.Of<ILogger<IQbittorrentService>>())
+            .ReplaceTrackers(oldTracker, newTracker);
     }
 }

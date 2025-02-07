@@ -2,10 +2,16 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
 using Unraid.Tool.Components;
 using Unraid.Tool.QBittorrent;
+using Unraid.Tool.QBittorrent.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
+//add log
+builder.Services.AddLogging(loggingBuilder =>
+{
+    loggingBuilder.AddConsole(); // 添加控制台日志
+});
 
-// 添加 Swagger 生成器
+// add swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -16,13 +22,15 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddScoped<IQbittorrentService, QbittorrentService>();
+builder.Services.AddSingleton<QbittorrentClient>();
 var app = builder.Build();
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Qbittorrent Manager API V1");
-    c.RoutePrefix = string.Empty; // 将 Swagger UI 设置为应用的根路径
+    c.RoutePrefix = "swagger";
 });
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -41,32 +49,7 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-QbittorrentClient qbClient = null;
-app.MapPost("/qbittorrent/Login", async ([FromBody]LoginRequest request) =>
-{
-    qbClient = new QbittorrentClient(request.Host, request.UserName, request.Password);
-    await qbClient.AuthenticateAsync();
-    return Results.Ok("Login successfully.");
-});
 
-app.MapGet("/qbittorrent/torrents", async () =>
-{
-    if (qbClient == null)
-    {
-        return Results.BadRequest("Please login first.");
-    }
-    var torrents = await qbClient.GetTorrentsAsync();
-    return Results.Ok(torrents);
-}).WithName("GetAllTorrents");
-
-app.MapPost("/qbittorrent/add-trackers", async (string torrentHash, string trackerUrls) =>
-{
-    if (qbClient == null)
-    {
-        return Results.BadRequest("Please login first.");
-    }
-    await qbClient.AddTrackersAsync(torrentHash, [trackerUrls]);
-    return Results.Ok("Trackers added successfully.");
-}).WithName("AddTrackers");;
+app.MapQbittorrentEndpoints();
 
 app.Run();
