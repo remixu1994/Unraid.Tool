@@ -1,0 +1,66 @@
+﻿@page "/qbittorrent"
+@using Unraid.Tool.QBittorrent
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudLayout>
+    <MudMainContent>
+        <MudContainer>
+            <MudPaper Elevation="3" Class="pa-4">
+                <MudTextField @bind-Value="Address" Label="Address" Variant="Variant.Outlined"></MudTextField>
+                <MudTextField @bind-Value="Username" Label="Username" Variant="Variant.Outlined"></MudTextField>
+                <MudTextField @bind-Value="Password" Label="Password" Variant="Variant.Outlined"></MudTextField>
+                <MudButton OnClick="Login" Color="Color.Primary" clie>登录</MudButton>
+            </MudPaper>
+            <MudPaper Elevation="3" Class="pa-4">
+                @if (isLoggedIn)
+                {
+                    <MudTextField @bind-Value="NewTracker" Label="新增Tracker地址" Variant="Variant.Filled"/>
+                    <MudButton OnClick="AddTrackers" Color="Color.Primary">新增Tracker</MudButton>
+                }
+            </MudPaper>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private string Username = "";
+    private string Password = "";
+    private string Address = "";
+    private bool isLoggedIn = false;
+    private List<IBrowserFile> TorrentFiles { get; set; }= new();
+    private string NewTracker = "";
+    [Inject]
+    private QbittorrentClient _client { get; set; }
+    
+    private async Task Login()
+    {
+        await _client.AuthenticateAsync(Address, Username, Password);
+        isLoggedIn = true;
+    }
+
+    private async Task AddTrackers()
+    {
+        if (isLoggedIn && TorrentFiles.Any() && !string.IsNullOrEmpty(NewTracker))
+        {
+            foreach (var file in TorrentFiles)
+            {
+                // 调用qBittorrent Web API添加Tracker
+                // 示例：使用HttpClient发送请求
+                var content = new MultipartFormDataContent();
+                content.Add(new StreamContent(file.OpenReadStream()), "torrents", file.Name);
+                content.Add(new StringContent(NewTracker), "urls");
+
+                var response = await Http.PostAsync("http://your-qbittorrent-api-url/api/v2/torrents/addTrackers", content);
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add($"Tracker已成功添加到{file.Name}", Severity.Success);
+                }
+                else
+                {
+                    Snackbar.Add($"添加Tracker失败：{file.Name}", Severity.Error);
+                }
+            }
+        }
+    }
+}

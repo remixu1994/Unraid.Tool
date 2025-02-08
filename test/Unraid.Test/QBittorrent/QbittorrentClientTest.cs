@@ -14,7 +14,7 @@ public class QbittorrentClientTest
     public QbittorrentClientTest()
     {
         _qbittorrentClient = new QbittorrentClient();
-        _qbittorrentClient.AuthenticateAsync("192.168.193.13:8082", "admin", "admin").Wait();
+        _qbittorrentClient.AuthenticateAsync("192.168.193.13:8082", "admin", "").Wait();
     }
 
     [TestMethod]
@@ -67,8 +67,8 @@ public class QbittorrentClientTest
     [TestMethod]
     public async Task Should_Replace_Tracker()
     {
-        var newTracker = "https://tracker.carpt.net/announce.php?passkey=2c41be0128b3674c04bad0ecae56ca85";
-        var oldTracker = "https://tracker.carpt.net/announce.php?passkey=fede2a966617e011feefbada42119afa";
+        var newTracker = "https://tracker.m-team.cc/announce?credential=c2lnbj0yNTFhYjcyZjNhMTYwNWYzNmJmZTc5MTIwODAzOTMyMSZ0PTE3Mzg5ODE0MjQmdGlkPTMxMDA3MiZ1aWQ9MzQ4Mzk5";
+        var oldTracker = "https://tracker.m-team.cc/announce?credential=c2lnbj1kOTY4ZjM5ZTgwNTVjYjQ0NTIxZDZiZjczMTNhOThhYyZ0PTE3Mzg5NDMxNDMmdGlkPTkwMzY4NCZ1aWQ9MzQ4MzIz";
         await new QbittorrentService(_qbittorrentClient, Mock.Of<ILogger<IQbittorrentService>>())
             .ReplaceTrackers(oldTracker, newTracker);
     }

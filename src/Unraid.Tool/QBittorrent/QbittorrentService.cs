@@ -14,16 +14,31 @@ public class QbittorrentService(QbittorrentClient qbClient, ILogger<IQbittorrent
             var replaceTorrents = torrents.Where(x => x.Tracker == origUrl || x.TrackersCount > 1).ToList();
             foreach (var torrent in replaceTorrents)
             {
-                if (torrent.TrackersCount > 1)
+                try
                 {
-                    TrackerInfo[]? trackersAsync = await qbClient.GetTrackersAsync(torrent.Hash);
-                    if (trackersAsync!= null && trackersAsync.Any(x => x.Url == newUrl))
+                    if (torrent.TrackersCount > 1)
                     {
-                        logger.LogInformation("{Name}-{hash} already has {newUrl} tracker. Skip.", torrent.Name, torrent.Hash, newUrl);
-                        continue;
+                        TrackerInfo[]? trackersAsync = await qbClient.GetTrackersAsync(torrent.Hash);
+                        if (trackersAsync== null)
+                        {
+                            continue;
+                        }
+                        if (trackersAsync.Any(x => x.Url == newUrl))
+                        {
+                            logger.LogInformation("{Name}-{hash} already has {newUrl} tracker. Skip.", torrent.Name, torrent.Hash, newUrl);
+                            continue;
+                        }
+                        if (trackersAsync.Any(x=>x.Url != origUrl))
+                        {
+                            continue;
+                        }
                     }
+                    await qbClient.EditTrackerAsync(torrent.Hash, origUrl, newUrl);
                 }
-                await qbClient.EditTrackerAsync(torrent.Hash, origUrl, newUrl);
+                catch (Exception e)
+                {
+                    logger.LogError(e, "{Name}-{hash} already has {newUrl} tracker. Skip.", torrent.Name, torrent.Hash, newUrl);
+                }
             }
         }
 
