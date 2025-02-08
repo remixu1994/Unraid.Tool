@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
+using MudBlazor.Services;
 using Unraid.Tool.Components;
 using Unraid.Tool.QBittorrent;
 using Unraid.Tool.QBittorrent.Endpoints;
@@ -21,6 +23,13 @@ builder.Services.AddSwaggerGen(c =>
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+//mud blazor
+builder.Services.AddMudServices();
+builder.Services.AddScoped(sp => new HttpClient()
+{
+    BaseAddress = new Uri(sp.GetService<NavigationManager>()!.BaseUri)
+});
+
 
 builder.Services.AddScoped<IQbittorrentService, QbittorrentService>();
 builder.Services.AddSingleton<QbittorrentClient>();
