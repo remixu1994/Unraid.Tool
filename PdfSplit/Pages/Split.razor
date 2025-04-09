@@ -1,0 +1,83 @@
+﻿@page "/split"
+@using MudBlazor
+@using PdfSplit.Pdf
+@inject HttpClient Http
+@inject PdfSplit PdfSplit
+@inject ISnackbar Snackbar
+
+<PageTitle>Split</PageTitle>
+<MudPaper Class="pa-4">
+    <MudFileUpload T="IBrowserFile" FilesChanged="UploadFiles!">
+        <ActivatorContent>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.CloudUpload">
+                Upload Files
+            </MudButton>
+        </ActivatorContent>
+    </MudFileUpload>
+    @if (_files != null)
+    {
+        <MudText Typo="@Typo.h6">@_files.Count() File@(_files.Count() == 1 ? "" : "s"):</MudText>
+        <MudList T="string">
+            @foreach (var file in _files)
+            {
+                <MudListItem Icon="@Icons.Material.Filled.AttachFile" @key="@file">
+                    @file.Name <code>@file.Size bytes</code>
+                </MudListItem>
+            }
+        </MudList>
+    }
+    <MudText>选择PDF文件并输入每部分的最大页数：</MudText>
+    <MudTextField @bind-Value="pagesPerSplit" Type="InputType.Number" Label="每部分页数" Class="mt-4"/>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SplitPdf" Class="mt-4">分割PDF</MudButton>
+</MudPaper>
+
+@if (splitResults.Any())
+{
+    <MudPaper Class="pa-4 mt-4">
+        <MudText>分割结果：</MudText>
+        <MudList T="string">
+            @foreach (var result in splitResults)
+            {
+                <MudListItem>
+                    <MudText>@result</MudText>
+                    <MudButton Variant="Variant.Text" Color="Color.Info" OnClick="() => DownloadFile(result)">下载
+                    </MudButton>
+                </MudListItem>
+            }
+        </MudList>
+    </MudPaper>
+}
+
+@code {
+    private int pagesPerSplit = 100;
+    private List<string> splitResults = new List<string>();
+
+    IList<IBrowserFile> _files = new List<IBrowserFile>();
+
+    private void UploadFiles(IBrowserFile file)
+    {
+        _files.Add(file);
+    }
+
+
+    private async Task SplitPdf()
+    {
+        if (_files.Count == 0)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+            Snackbar.Add("TODO: Upload your files!");
+            return;
+        }
+        splitResults.Clear();
+        var splitPdfs = await PdfSplit.Split(_files.First(), pagesPerSplit);
+        splitResults = splitPdfs.Select(x => x.Item1).ToList();
+    }
+
+    private Task DownloadFile(string result)
+    {
+        throw new NotImplementedException();
+    }
+
+}

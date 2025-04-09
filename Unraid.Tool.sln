@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unraid.Tool", "src\Unraid.T
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unraid.Test", "test\Unraid.Test\Unraid.Test.csproj", "{85757530-B296-4384-A881-05572834B2DC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PdfSplit", "PdfSplit\PdfSplit.csproj", "{32664920-57A2-49A0-9CBE-7C11A09B05A5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{85757530-B296-4384-A881-05572834B2DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{85757530-B296-4384-A881-05572834B2DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{85757530-B296-4384-A881-05572834B2DC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{32664920-57A2-49A0-9CBE-7C11A09B05A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{32664920-57A2-49A0-9CBE-7C11A09B05A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{32664920-57A2-49A0-9CBE-7C11A09B05A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{32664920-57A2-49A0-9CBE-7C11A09B05A5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
