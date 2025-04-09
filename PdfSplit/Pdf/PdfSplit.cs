@@ -32,7 +32,6 @@ public class PdfSplit
                 }
 
                 var name = $"{fileName}_{i * pagesPerSplit}_{(i + 1) * pagesPerSplit}.pdf";
-                // newPdf.Save($"E:\\{fileName}_{i * pagesPerSplit}_{(i + 1) * pagesPerSplit}.pdf");
                 using var outStream = new MemoryStream();
                 newPdf.Save(outStream);
                 result.Add((name, outStream));

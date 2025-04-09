@@ -1,9 +1,11 @@
 ﻿@page "/split"
+@using System.Reflection.Metadata.Ecma335
 @using MudBlazor
 @using PdfSplit.Pdf
 @inject HttpClient Http
 @inject PdfSplit PdfSplit
 @inject ISnackbar Snackbar
+@inject IJSRuntime JsRuntime
 
 <PageTitle>Split</PageTitle>
 <MudPaper Class="pa-4">
@@ -28,7 +30,21 @@
             }
         </MudList>
     }
-    <MudText>选择PDF文件并输入每部分的最大页数：</MudText>
+    <MudCard Header="拆分设置">
+        @for (var index = 0; index < SplitGroupSettings.Count; index++)
+        {
+            var text = $@"组别{index + 1}";
+            var group = SplitGroupSettings[index];
+            <MudExpansionPanel Text=@text Expanded="true">
+                <MudStack Row="true">
+                    <MudTextField Label="从页数" @bind-Value="group.FromPage" Min="1"/>
+                    <MudTextField Label="至" @bind-Value="group.ToPage" Min="1"/>
+                </MudStack>
+            </MudExpansionPanel>
+        }
+
+        <MudButton Color="Color.Primary" @onclick="AddGroup">+添加组别</MudButton>
+    </MudCard>
     <MudTextField @bind-Value="pagesPerSplit" Type="InputType.Number" Label="每部分页数" Class="mt-4"/>
     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SplitPdf" Class="mt-4">分割PDF</MudButton>
 </MudPaper>
@@ -38,11 +54,11 @@
     <MudPaper Class="pa-4 mt-4">
         <MudText>分割结果：</MudText>
         <MudList T="string">
-            @foreach (var result in splitResults)
+            @foreach (var splitFile in splitResults)
             {
                 <MudListItem>
-                    <MudText>@result</MudText>
-                    <MudButton Variant="Variant.Text" Color="Color.Info" OnClick="() => DownloadFile(result)">下载
+                    <MudText>@splitFile</MudText>
+                    <MudButton Variant="Variant.Text" Color="Color.Info" OnClick="() => DownloadFile(splitFile)">下载
                     </MudButton>
                 </MudListItem>
             }
@@ -51,16 +67,25 @@
 }
 
 @code {
+
+    public class SplitGroup
+    {
+        public int FromPage { get; set; }
+        public int ToPage { get; set; }
+    }
+
+    public static readonly List<SplitGroup> SplitGroupSettings = new() { new SplitGroup() { FromPage = 1, ToPage = 1 } };
+
     private int pagesPerSplit = 100;
     private List<string> splitResults = new List<string>();
 
     IList<IBrowserFile> _files = new List<IBrowserFile>();
+    private List<(string?, MemoryStream)> SplitPdfs;
 
     private void UploadFiles(IBrowserFile file)
     {
         _files.Add(file);
     }
-
 
     private async Task SplitPdf()
     {
@@ -70,14 +95,36 @@
             Snackbar.Add("TODO: Upload your files!");
             return;
         }
+
         splitResults.Clear();
-        var splitPdfs = await PdfSplit.Split(_files.First(), pagesPerSplit);
-        splitResults = splitPdfs.Select(x => x.Item1).ToList();
+        SplitPdfs = await PdfSplit.Split(_files.First(), pagesPerSplit);
+        splitResults = SplitPdfs.Select(x => x.Item1).ToList();
     }
 
-    private Task DownloadFile(string result)
+    private async Task DownloadFile(string fileName)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var file = SplitPdfs.Find(x => x.Item1 == fileName);
+            // if not found
+            if (file.Item1 == null)
+            {
+                Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+                Snackbar.Add($"未找到文件!:{fileName}");
+            }
+
+            //save file
+            await JsRuntime.InvokeVoidAsync("saveFile", file.Item2.ToArray(), fileName);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    private void AddGroup()
+    {
+        SplitGroupSettings.Add(new SplitGroup() { FromPage = 1, ToPage = 1 });
     }
 
 }
